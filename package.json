@@ -1,0 +1,38 @@
+{
+  "name": "tasknest",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TaskNest - a full-stack Todo and Notes dashboard built with React, Express and in-memory data",
+  "type": "module",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c magenta,cyan \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run dev --workspace server",
+    "dev:client": "npm run dev --workspace client",
+    "start": "npm run start --workspace server",
+    "build": "npm run build --workspace client",
+    "preview": "npm run preview --workspace client",
+    "test": "npm run test:server && npm run test:client",
+    "test:server": "npm run test --workspace server",
+    "test:client": "npm run test --workspace client"
+  },
+  "keywords": [
+    "react",
+    "express",
+    "rest-api",
+    "todo",
+    "notes",
+    "vitest",
+    "supertest"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.11.0"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}

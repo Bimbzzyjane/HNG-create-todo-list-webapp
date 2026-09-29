@@ -1,0 +1,100 @@
+/**
+ * Design tokens.
+ *
+ * Everything visual is driven by these variables: a light canvas, indigo/blue
+ * accents and a deep navy sidebar. Change a value here and the whole dashboard
+ * follows.
+ */
+:root {
+  /* Surfaces */
+  --color-canvas: #f4f5fb;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8f9fd;
+  --color-surface-sunken: #eef0f8;
+  --color-sidebar: #1a1d2e;
+  --color-sidebar-hover: #272b42;
+  --color-sidebar-text: #e7e9f5;
+  --color-sidebar-muted: #9ba1bd;
+
+  /* Text */
+  --color-text: #14161f;
+  --color-text-muted: #6a7086;
+  --color-text-subtle: #8d93a8;
+
+  /* Brand */
+  --color-primary: #4f46e5;
+  --color-primary-strong: #4338ca;
+  --color-primary-soft: #edeeff;
+  --color-primary-border: #d7d9ff;
+  --color-primary-contrast: #ffffff;
+
+  /* Status */
+  --color-success: #0f9d68;
+  --color-success-soft: #dcf6ec;
+  --color-warning: #b45309;
+  --color-warning-soft: #fdf0d9;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fdeaea;
+  --color-info: #2563eb;
+  --color-info-soft: #e4ecfe;
+
+  /* Priority */
+  --priority-high-bg: #fde8ea;
+  --priority-high-text: #b91c3c;
+  --priority-medium-bg: #fdf0d9;
+  --priority-medium-text: #9a5b06;
+  --priority-low-bg: #e4ecfe;
+  --priority-low-text: #1d4ed8;
+
+  /* Notes pastels */
+  --note-lavender: #f1efff;
+  --note-sky: #ebf2ff;
+  --note-mint: #e9f8f1;
+  --note-amber: #fdf4e6;
+
+  /* Borders and shadows */
+  --color-border: #e6e8f2;
+  --color-border-strong: #d5d8e8;
+  --shadow-xs: 0 1px 2px rgba(20, 22, 31, 0.05);
+  --shadow-sm: 0 2px 8px rgba(20, 22, 31, 0.05);
+  --shadow-md: 0 10px 24px rgba(20, 22, 31, 0.07);
+  --shadow-lg: 0 24px 48px rgba(20, 22, 31, 0.18);
+
+  /* Radius */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-pill: 999px;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+
+  /* Typography */
+  --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+
+  /* Layout */
+  --sidebar-width: 264px;
+  --content-max-width: 1280px;
+  --header-height: 84px;
+
+  /* Motion */
+  --transition-fast: 140ms ease;
+  --transition-base: 220ms ease;
+  --focus-ring: 0 0 0 3px rgba(79, 70, 229, 0.35);
+}
