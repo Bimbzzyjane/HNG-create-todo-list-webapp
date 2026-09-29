@@ -327,6 +327,40 @@ Conventions:
 
 ---
 
+# Deployment Rules
+
+The app deploys to **Vercel** with [`vercel.json`](vercel.json) at the repository
+root, which defines two Vercel **Services**:
+
+- `frontend` -> `client/` (framework `vite`), serving everything and falling back
+  to `index.html` so client side routes survive a hard refresh.
+- `api` -> `server/` (framework `express`), entry point `server/vercel.js`.
+
+Rules:
+
+- **Public routing lives only in the top-level `rewrites`.** `/api` and
+  `/api/(.*)` must stay before the catch-all `/(.*)` rule, otherwise API calls
+  would return `index.html`.
+- **In services mode, build and runtime fields are invalid at the top level.**
+  `framework`, `buildCommand`, `outputDirectory`, `installCommand`, `devCommand`,
+  `ignoreCommand` and `functions` belong inside the service they describe.
+- Vercel hands a service the **original request path**, so keep the API mounted at
+  `/api` in Express. Never add a path prefix that only exists to please the host.
+- Keep **two entry points working**: `server/server.js` (long-running local/docker
+  process with `app.listen`) and `server/vercel.js` (exports the same app for the
+  serverless runtime). Both must reuse `createApp()`; never duplicate app setup.
+- **`express.static()` is ignored on Vercel.** Do not rely on Express to serve the
+  React build in production; the frontend service (or `public/**`) does that.
+- **Do not treat production as durable.** Each serverless instance keeps its own
+  in-memory store, and cold starts reseed it. If a user asks for data that
+  survives deploys, that is the point where a real database behind
+  `server/data/*Repository.js` is agreed on first - never added silently.
+- Never commit the `.vercel` directory (it is git-ignored).
+- After changing `vercel.json`, `server/vercel.js` or anything that affects the
+  API path, re-run `npm run test:server`, `npm run test:client` and `npm run build`.
+
+---
+
 # Agent Workflow
 
 1. **Understand before changing.** Read this file, the README, the relevant

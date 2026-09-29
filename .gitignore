@@ -6,6 +6,9 @@ dist/
 build/
 .vite/
 
+# Vercel
+.vercel
+
 # Environment files
 .env
 .env.local

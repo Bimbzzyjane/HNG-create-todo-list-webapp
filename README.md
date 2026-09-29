@@ -29,6 +29,7 @@ overview page.
 - [Running the frontend](#running-the-frontend)
 - [Running both together](#running-both-together)
 - [Running the tests](#running-the-tests)
+- [Deploying to Vercel](#deploying-to-vercel)
 - [API endpoints](#api-endpoints)
 - [Data management approach](#data-management-approach)
 - [Current limitations](#current-limitations)
@@ -137,11 +138,13 @@ Add your own screenshots to `docs/` and link them here, for example:
 │   ├── utils/               AppError, ids, dates, priorities, clock
 │   ├── validators/          reusable input validation
 │   ├── app.js               Express app factory
-│   └── server.js            entry point
+│   ├── server.js            entry point (listen + graceful shutdown)
+│   └── vercel.js            entry point for Vercel (exports the app)
 ├── docs/
 │   └── ui-reference.png
 ├── AGENTS.md                instructions for AI coding agents
 ├── README.md
+├── vercel.json              Vercel deployment config (frontend + api services)
 └── package.json             npm workspaces + top-level scripts
 ```
 
@@ -302,6 +305,136 @@ What the backend suite covers:
 
 Every test starts from a clean, predictable store (`resetData()` in
 `beforeEach`), so tests are independent of each other and of seeded data.
+
+---
+
+## Deploying to Vercel
+
+> **Read this first - the in-memory caveat.**
+> On Vercel the API runs as a Function on Fluid compute: instances scale to zero
+> when idle and several instances can serve traffic in parallel. Our data lives
+> **in memory inside one instance**, so on Vercel:
+>
+> - demo data reloads on every cold start, and
+> - two simultaneous requests can land on different instances with different data.
+>
+> That is fine for a portfolio demo (the seeded todos and notes keep it looking
+> alive), but it is **not** durable storage. For real persistence, turn the
+> repository modules into PostgreSQL/Redis-backed implementations (see
+> [Data management approach](#data-management-approach)) or keep the API on an
+> always-on host (option B below).
+
+### One project, both parts (Vercel Services)
+
+The repository ships a [`vercel.json`](vercel.json) that deploys the React app and
+the Express API as **two services in a single Vercel project** (one domain, one
+deployment):
+
+| Service    | Root      | Framework | Serves                                             |
+| ---------- | --------- | --------- | -------------------------------------------------- |
+| `frontend` | `client/` | `vite`    | Everything else, with an `index.html` SPA fallback  |
+| `api`      | `server/` | `express` | `/api/*` (entry point `server/vercel.js`)           |
+
+```json
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "frontend": {
+      "root": "client/",
+      "framework": "vite",
+      "buildCommand": "npm run build",
+      "outputDirectory": "dist",
+      "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+    },
+    "api": { "root": "server/", "framework": "express", "entrypoint": "vercel.js" }
+  },
+  "rewrites": [
+    { "source": "/api", "destination": { "service": "api" } },
+    { "source": "/api/(.*)", "destination": { "service": "api" } },
+    { "source": "/(.*)", "destination": { "service": "frontend" } }
+  ]
+}
+```
+
+Why this shape:
+
+- **Top-level `rewrites` own all public traffic.** `/api/...` goes to the Express
+  service; every other path goes to the Vite service.
+- **Services receive the original request path**, so `/api/todos?status=pending`
+  reaches the existing Express router untouched - no changes to the API contract.
+- **Build settings live inside each service.** In services mode Vercel rejects
+  `framework`, `buildCommand`, `outputDirectory` and `installCommand` at the top
+  level, so they are scoped per service.
+- The SPA fallback is a rewrite *inside* the frontend service - that is what makes
+  deep links such as `/todos` work after a hard refresh.
+- `server/vercel.js` is the serverless entry point: it exports the same
+  `createApp()` app that `server.js` listens with locally, so routes, validation
+  and error handling are identical in every environment.
+
+**Steps (Vercel dashboard)**
+
+1. Push the repository to GitHub.
+2. In Vercel choose **Add New → Project** and import the repository.
+3. Leave **Root Directory** at the repository root - `vercel.json` defines both
+   services from there.
+4. Leave the framework preset on **Other**; the per-service presets come from
+   `vercel.json`.
+5. Optional environment variables (Project → Settings → Environment Variables):
+   `SEED_DATA` (`true` by default). `CLIENT_ORIGIN` is **not** needed here,
+   because the browser and the API share one domain (same-origin requests).
+6. **Deploy**, then check `https://<your-project>.vercel.app/api/health` - it
+   should return the health JSON with the record counts.
+
+**Steps (Vercel CLI)**
+
+```bash
+npm i -g vercel
+vercel            # preview deployment
+vercel --prod     # production deployment
+vercel dev        # runs BOTH services locally (add -L to skip the login prompt)
+```
+
+**Vercel-specific notes**
+
+- Services are a **beta** feature (available on all plans). If a deployment
+  rejects the `services` key, enable Services (beta) for the project first, or
+  use option B.
+- `express.static()` is ignored on Vercel - static files are served by the
+  frontend service. Running `NODE_ENV=production npm start` locally still works.
+- Vercel sets `NODE_ENV=production`, so API error messages stay generic and
+  request logging goes to the Vercel runtime logs.
+- Local development is unchanged: `npm run dev` (Vite dev server + `/api` proxy).
+
+### Option B: client on Vercel, API on an always-on host
+
+Best when you want the in-memory data to survive between requests (a free tier
+that sleeps still resets it, an always-on instance does not).
+
+1. **API** on Render / Railway / Fly.io / a VPS: build `server/`, start with
+   `npm start`, and set `CLIENT_ORIGIN=https://<your-client>.vercel.app`
+   (comma separated for several origins).
+2. **Client** as its own Vercel project with **Root Directory = `client/`** and
+   the environment variable `VITE_API_BASE_URL=https://<your-api-host>/api`.
+   Vite inlines this value **at build time**, so set it before deploying and
+   redeploy after changing it.
+3. For deep links (`/todos` on a hard refresh), add a `client/vercel.json`:
+
+   ```json
+   { "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
+   ```
+
+   This file is only read when the project root is `client/`; the services setup
+   above does not need it.
+
+### Troubleshooting
+
+| Symptom | Fix |
+| --- | --- |
+| Deploy fails and mentions `services` | Enable the Services beta for the project, or use option B. |
+| Install/build errors about missing packages | Keep Root Directory at the repository root so Vercel installs the npm workspaces, then redeploy without the build cache. |
+| `/api/health` returns the React `index.html` | The `/api` rewrite is missing or ordered after the catch-all - keep the API rewrites first in `vercel.json`. |
+| UI shows "Cannot reach the API" | The client points at another origin: set `VITE_API_BASE_URL` (option B) and redeploy so the new value is baked into the build. |
+| Todos disappear after a while | Expected with in-memory storage on serverless instances - see the caveat at the top of this section, or move to option B / a real database. |
 
 ---
 
